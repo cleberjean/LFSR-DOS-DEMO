@@ -88,4 +88,4 @@ clock and the LFSR cycle from falling into harmonic synchronization, ensuring th
 static noise of each cycle feels organic and unpredictable.
 
 
-**You are free to use, clone, study, and suggest modifications to this code.**
+**You are free to use, clone, study, and suggest modifications for this code.**
