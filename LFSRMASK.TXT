@@ -1,0 +1,80 @@
+Tabela LFSR de Bits para Mascara XOR
+====================================
+
+O algoritmo usa as seguintes linhas de codigo (usando AX como exemplo):
+
+Obtem_LFSR:  
+  mov ax,Seed      ; AX recebe a semente do gerador, que NUNCA DEVE ser 0
+  shr ax,1         ; desloca a semente para a direita deixado o bit menos significativo no Flag Carry 
+  jnc Nao_Mascara  ; se carry = 0 nao aplica a mascara
+  xor ax,XOR_MASK  ; aplica a mascara de acordo com o periodo de bits desejado
+
+Nao_Mascara:
+  .
+  .
+  .
+
+O rotulo "Nao_Mascara" pode salvar o valor de AX em algum lugar ou comparar 
+com um limite que nao seja potencia de 2, como 1000, 123456, descartando 
+qualquer valor acima ou igual. Por exemplo:
+
+Nao_Mascara: 
+  cmp  ax,1000
+  ja   Obtem_LFSR  ; gera valores de 1 a 1000, recalculando valores acima 
+                   ; (decremente 1 unidade para obter valores de 0 a 999, 
+                   ; mas NAO de AX, que neste caso armazena a semente 
+                   ; (que NUNCA deve ser zero)).
+
+  ret ou mov [LFSR_Seed],ax
+------------------------------------------------------------------------------   
+
+
+Bits   Mascara (XOR)
+--------------------  
+  2,    0x3
+  3,    0x6
+  4,    0xC
+  5,    0x14
+  6,    0x30
+  7,    0x60
+  8,    0xB8
+  9,    0x110
+ 10,    0x240
+ 11,    0x500
+ 12,    0x829
+ 13,    0x100D
+ 14,    0x2015
+ 15,    0x6000
+ 16,    0xB400
+ 17,    0x12000
+ 18,    0x20400
+ 19,    0x40023
+ 20,    0x90000
+ 21,    0x140000
+ 22,    0x300000
+ 23,    0x420000
+ 24,    0xE10000
+ 25,    0x1200000
+ 26,    0x2000023
+ 27,    0x4000013
+ 28,    0x9000000
+ 29,    0x14000000
+ 30,    0x20408400
+ 31,    0x48000000
+ 32,    0x80200003
+ 33,    0x100080000
+ 34,    0x204000003
+ 35,    0x500000000
+ 36,    0x801000000
+ 37,    0x1940000000
+ 38,    0x3180000000
+ 39,    0x4400000000
+ 40,    0xA000140000
+ 41,    0x12000000000
+ 42,    0x30000C0000
+ 43,    0x63000000000
+ 44,    0xC0000030000
+ 45,    0x1B0000000000
+ 46,    0x204002080000
+ 47,    0x420000000000
+ 48,    0xC0000180000

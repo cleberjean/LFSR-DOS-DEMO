@@ -1,7 +1,7 @@
 ;*****************************************************************************
 ; Linear Feedback Shift Register Use Demonstration for 8086 CPU
 ; Cleber Jean Barranco <cleberjean@hotmail.com>
-; Version 3.1 (with messages) from 10jun2026.
+; Version 3.1 (with messages) from 12jun2026.
 ; Runs "Fade In" and "Fade Out" effects until the Esc key is pressed.
 ;
 ; Compile with: nasm lfsr.asm -o lfsr.com
@@ -10,16 +10,16 @@
 ;*****************************************************************************
 
 
-    cpu   8086                         ; code for 8086 (OBRIGATORY directive)
-
+    cpu   8086                         ; Generate binary for 8086 (OBRIGATORY
+                                       ; for not generate 80286 code).
     org   100h                         ; Program is a .COM file
 
 
 ;-----------------------------------------------------------------------------
 ; Constants
 ;-----------------------------------------------------------------------------
-    FADE_IN_COLOR       equ 0x0F       ; Color for screen full
-    FADE_OUT_COLOR      equ 0x00       ; Color for screen empty
+    FADE_IN_COLOR       equ 0x0F       ; Color for the screen full
+    FADE_OUT_COLOR      equ 0x00       ; Color for the screen empty
     LFSR_XOR_MASK       equ 0xB400     ; XOR mask for LFSR computing
     LFSR_INITIAL_SEED   equ 1          ; LFSR initial seed (CANNOT be = 0)
     LFSR_MAX_PERIOD     equ 64000      ; Fill 64000 bytes from screen 320x200
@@ -307,8 +307,8 @@ Seed_OK:
 
 ;-----------------------------------------------------------------------------
 ; LFSR Galois Number Generator (stored in BP reg by all program execution)
-; Since LFSR does not generate the value 0 (is prohibited), we must
-; generate a period from 1 to 64000, to obtain the value 0 (if BP = 1), 
+; Since LFSR does not generate the value 0 (is forbidden), we must
+; generate a period from 1 to 64000, to can obtain the value 0 (BP = 1), 
 ; by decrementing BP before using it and incrementing it again after use,
 ; to back it to a non zero value, since BP stores the LFSR seed throughout 
 ; the program.
@@ -455,7 +455,7 @@ Draw_Char_Next_Bit:
     section .data                      ; (Nasm Directive) (Optional!)
 
 ;LFSR_Seed        dw 1                  ; LFSR seed NEVER must be 0, or
-;                                       ; LFSR will freeze with zeros
+;                                       ; LFSR will freeze with zeros!
 
 Initial_Seed     dw 1                  ; Stores the randomized LFSR initial
                                        ; seed and used to check the restart
@@ -470,5 +470,5 @@ Need_VGA_Msg     db 0Dh, 0Ah, "I need a VGA video card!", 0Dh, 0Ah, "$"
 Msg_Full         db "The Screen is Full", 0
 Msg_Clean        db "The Screen is Blank", 0
 
-PGM_SIGNATURE    db "LFSR V3.1 10MAY2026"
+PGM_SIGNATURE    db "LFSR V3.1 12MAY2026"
 
