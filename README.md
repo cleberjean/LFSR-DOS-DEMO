@@ -5,13 +5,19 @@ A classics graphic effect of *Fade In* and *Fade Out* written in **pure Assembly
 
 The project runs in **Mode 13h** (320x200 pixels, 256 colors), **bare-metal** or emulated (DOSBox, DOSBox-X) DOS environment.
 
+    
+Author
+======
+Cleber Jean Barranco - cleberjean@hotmail.com
+
+
 How to Compile
 ==============
 
-You will need the **NASM** (Netwide Assembler) installed on your machine (DOS, WIndows, Linux, DOSBox),
+You will need the **NASM** (Netwide Assembler) installed on your machine (DOS, WIndows, Linux, DOSBox(-X)),
 to compile the source.
 
-Compile the source code with: **nasm lfsr.asm -o lfsr.com**
+Compile with: **nasm lfsr.asm -o lfsr.com**
 
 
 How to Run
@@ -19,12 +25,12 @@ How to Run
 
 The generated file is less than 1 KB and you can execute it directly in:
 
-A PC (with an 8086 or lastest processors) running native MS-DOS/FreeDOS (bare-metal).
+A PC (with an 8086 or lastest processors) running native MS-DOS/FreeDOS (**bare-metal**).
 
-The DOSBox emulator (simply drag and drop the lfsr.com file into the emulator window
+The DOSBox(-X) emulator (simply drag and drop the lfsr.com file into the emulator window
 or mount its directory as a drive).
 
-You may press the Esc key at any time to terminate the program and return to the DOS prompt.
+You can press the **Esc key** at any time to terminate the program and return to the DOS prompt.
 
 
 How the LFSR Works in This Project
@@ -36,7 +42,7 @@ of numbers that looks random but is completely deterministic.
 The 320x200 Challenge
 =====================
 
-The screen in Mode 13h has exactly 64,000 pixels (320x200). A standard 16-bit LFSR has a maximum
+The screen in Mode 13h has exactly **64,000** pixels (320x200). A standard 16-bit LFSR has a maximum
 period of 2^16 - 1 = 65,535 unique states. If we plotted all of them, the program would attempt to
 draw outside the video memory limits (0xA000), breaking the effect or corrupting other data.
 
@@ -53,40 +59,33 @@ and without overflowing the memory.
 
 The "Zero" Problem
 ==================
-By definition, the value 0 is forbidden in an LFSR because it causes the algorithm to lock
+By definition, the value 0 is **forbidden** in an LFSR because it causes the algorithm to lock
 into an infinite loop of zeros. However, video memory starts at offset 0.
 
-**The Solution:** The program generates a sequence from 1 to 64,000. Before plotting the pixel
-              on the screen with the stosb instruction, the destination register (DI) is
-              decremented (dec di). This way, we map the sequence perfectly to the video
-              memory offset range of 0 to 63,999.
+**The Solution:** The program generates a sequence from 1 to 64,000 and before plotting the
+              pixel on the screen with the stosb instruction, the destination register (DI)
+              is decremented (**dec di**). This way, we map the sequence perfectly to the
+              video memory offset range of 0 to 63,999.
 
 
 Optimization & Engineering Highlights
 =====================================
-Exclusive Register Usage (BP): The LFSR seed is permanently kept inside the BP register
+**Exclusive Register Usage (BP):** The LFSR seed is permanently kept inside the **BP register**
 during critical animation loops. This eliminates the RAM read/write bottleneck, ensuring
 the maximum frame rate the processor can deliver.
 
 **Color Alchemy via XOR Inversion:** The text rendering routine (Draw_Char_Mode_13h) uses
-the 0x0E mask via the xor bl, bh instruction. This creates an automatic dynamic contrast:
+the 0x0E mask via the **xor bl, bh** instruction. This creates an automatic dynamic contrast:
 the text turns Blue over the full screen (White) and Yellow over the clean screen (Black),
 without needing a single line change in the character generator logic.
 
-**Vertical Retrace Synchronization (INT 10h):** The code monitors the CRT status port (0x03DA)
+**Vertical Retrace Synchronization (INT 10h):** The code monitors the CRT status port (**0x03DA**)
 to synchronize plotting with the monitor's electron beam, preventing screen tearing.
 
 **Temporal Synchronization Break:** The Pause procedure intentionally adds 4 extra frames
 beyond the regular 150 frames (2.5 seconds at 60Hz). This asymmetry prevents the system
 clock and the LFSR cycle from falling into harmonic synchronization, ensuring that the
 static noise of each cycle feels organic and unpredictable.
-
-    
-Author
-======
-Cleber Jean Barranco - cleberjean@hotmail.com
-
-Developed in: June 2026.
 
 
 **You are free to clone, study, and suggest modifications to this piece of low-level computer graphics.**
