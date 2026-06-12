@@ -17,7 +17,7 @@ Abra o terminal na pasta do projeto e execute o comando abaixo para gerar o exec
 ```bash
 nasm lfsr.asm -o lfsr.com
 
-**How to Run**
+`How to Run
 
 The generated file is less than 1 KB. You can execute it directly in:
 
