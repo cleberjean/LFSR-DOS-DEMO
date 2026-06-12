@@ -17,7 +17,7 @@ Abra o terminal na pasta do projeto e execute o comando abaixo para gerar o exec
 ```bash
 nasm lfsr.asm -o lfsr.com
 
-###How to Run
+**How to Run**
 
 The generated file is less than 1 KB. You can execute it directly in:
 
@@ -27,7 +27,7 @@ The generated file is less than 1 KB. You can execute it directly in:
 
     Press the Esc key at any time to terminate the program and return to the DOS prompt.
 
-### How the LFSR Works in This Project
+**How the LFSR Works in This Project**
 
 A Linear Feedback Shift Register is a mathematical structure that generates a sequence of numbers that looks random but is completely deterministic.
 The 320x200 Challenge
@@ -42,13 +42,13 @@ To solve this, this code implements a Bound Check inside the Galois generator:
 
     This ensures that we cover exactly the 64,000 pixels on the screen without repetition and without overflowing the memory.
 
-###The "Zero" Problem
+**The "Zero" Problem**
 
 By definition, the value 0 is forbidden in an LFSR because it causes the algorithm to lock into an infinite loop of zeros. However, video memory starts at offset 0.
 
 The Solution: The program generates a sequence from 1 to 64,000. Before plotting the pixel on the screen with the stosb instruction, the destination register (DI) is decremented (dec di). This way, we map the sequence perfectly to the video memory offset range of 0 to 63,999.
 
-###Optimization & Engineering Highlights
+**Optimization & Engineering Highlights**
 
     Exclusive Register Usage (BP): The LFSR seed is permanently kept inside the BP register during critical animation loops. This eliminates the RAM read/write bottleneck, ensuring the maximum frame rate the processor can deliver.
 
@@ -58,7 +58,7 @@ The Solution: The program generates a sequence from 1 to 64,000. Before plotting
 
     Temporal Synchronization Break: The Pause procedure intentionally adds 4 extra frames beyond the regular 150 frames (2.5 seconds at 60Hz). This asymmetry prevents the system clock and the LFSR cycle from falling into harmonic synchronization, ensuring that the static noise of each cycle feels organic and unpredictable.
 
-###Author
+**Author**
 
     Cleber Jean Barranco - cleberjean@hotmail.com
 
