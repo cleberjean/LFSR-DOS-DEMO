@@ -10,7 +10,7 @@ O projeto roda em **Modo 13h** (320x200 pixels, 256 cores) e foi totalmente otim
 ## 🛠️ Como Compilar e Executar
 
 ### Pré-requisitos
-Você precisará do **NASM** (Netwide Assembler) instalado na sua máquina (disponível nativamente no Linux Manjaro via `pacman -S nasm`).
+Você precisará do **NASM** (Netwide Assembler) instalado na sua máquina (disponível nativamente no Linux via àpt install nasm` no Ubuntu ou derivados Debian ou `pacman -S nasm` nos derivados Arch Linux (Manjaro)).
 
 ### Compilação
 Abra o terminal na pasta do projeto e execute o comando abaixo para gerar o executável compacto `.COM`:
