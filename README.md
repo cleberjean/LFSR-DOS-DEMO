@@ -25,7 +25,7 @@ Compile with: **nasm lfsr.asm -o lfsr.com**
 How to Run
 ==========
 
-The generated file is less than 1 KB (~450 bytes) and you can execute it directly in:
+The generated file is less than 1 KB (~500 bytes) and you can execute it directly in:
 
 - A PC (with an 8086 or lastest processors) running native MS-DOS/FreeDOS (**bare-metal**).
 
