@@ -7,8 +7,9 @@
 ; Compile with: nasm lfsr.asm -o lfsr.com
 ;
 ; NOTE: BP register stores the LFSR seed THROUGHOUT the program!
-;       Do not wait which called routines preserve AX, BX, CX or DX. Save
-;       them if you need preserve.
+;       Do not wait which called routines will preserve AX, BX, CX or DX.
+;       They are for general purpose in the program. Save them if you need 
+;       to preserve them.
 ;*****************************************************************************
 
 
@@ -73,15 +74,16 @@ No_VGA:
 Get_Video_Mode:
     mov   ah,0Fh
     int   10h                          ; Gets current video mode
-    push  ax                           ; Saves current video mode
-                                       ; Will restored on before to return to DOS
-
+    mov   ah,bh                        ; Copies current video page in AH
+    push  ax                           ; Saves current video mode and page
+                                       ; Will restored on before to return
+                                       ; to DOS
 
 ;-----------------------------------------------------------------------------
 ; Change Video Mode to 320x200 by 256 Colors
 ;-----------------------------------------------------------------------------
 Set_VGA_Mode:    
-    mov   ax,0013h                     ; Video mode 13h
+    mov   ax,0013h                     ; Select video mode 13h
     int   10h                          ; Change to MCGA (320x200x256)
 
 
@@ -97,12 +99,13 @@ Set_VGA_Mode:
 
 
 ;-----------------------------------------------------------------------------
-; Checks if Mouse is Present (allow finish the execution if it be moved)
-; Stores 0xFFFF if mouse is present.
+; Checks if Mouse is Present (allow finish the execution if it is moved)
+; Stores 0xFF if mouse is present.
 ;-----------------------------------------------------------------------------
    xor   ax,ax
    int   33h
-   mov   [cs:Mouse_Present],ax
+   or    al,ah                         ; Turns AX in AL
+   mov   [Mouse_Present],al            ; 0 = No mouse, 0xFF = Mouse present
 
 
 ;-----------------------------------------------------------------------------
@@ -125,6 +128,7 @@ Set_VGA_Mode:
     
     call  Check_Vertical_Retrace       ; Checks if retrace is in progress
                                        ; and wait it to restart
+
 
 ;-----------------------------------------------------------------------------
 ; Start of "Fade In" Effect
@@ -154,7 +158,7 @@ Fade_In_Plot_Loop:
 
 ; Checks Mouse and Keyboard
     call  Check_Mouse                  ; Gets mouse (if present) status
-    test  ax,ax                        ; Checks mouse status (0 = none)
+    test  al,al                        ; Checks mouse status (0 = none)
     jnz   Finish                       ; Mouse moved or buttons pressed
     call  Check_Keyboard               ; Checks keyboard
     cmp   al,ESC_KEY                   ; Was Esc key pressed?
@@ -175,7 +179,7 @@ Pause_FI:
     mov   di,POSITION_MSG_FULL
     call  Show_Message
     call  Pause
-    cmp   al,1                         ; Checks mouse status (if AX = 1 then mouse was altered).
+    cmp   al,1                         ; Checks mouse status (if AL = 1 then mouse was altered).
     je    Finish                       ; Mouse moved or buttons pressed
     cmp   al,ESC_KEY                   ; Was Esc key pressed during pause?
     je    Finish                       ; Yes, terminates program
@@ -204,7 +208,7 @@ Fade_Out_Plot_Loop:
     
 ; Checks Mouse and Keyboard
     call  Check_Mouse                  ; Gets mouse (if present) status
-    test  ax,ax                        ; Checks mouse status (0 = none)
+    test  al,al                        ; Checks mouse status (0 = none)
     jnz   Finish                       ; Mouse moved or buttons pressed
     call  Check_Keyboard               ; Checks keyboard
     cmp   al,ESC_KEY                   ; Was Esc key pressed?
@@ -231,10 +235,11 @@ Pause_FO:
 
 
 ;-----------------------------------------------------------------------------
-; Program End
+; Program End      (Note: Video page (AH) is not restored)
 ;-----------------------------------------------------------------------------
 Finish:
-    pop   ax                           ; Restores original video mode (AL)
+    pop   ax                           ; Restores original video mode (AL) 
+                                       ; and page (AH)
     xor   ah,ah                        ; Function 0
     int   10h                          ; Backs to original video mode
     int   20h                          ; Backs to DOS (All DOSes)
@@ -247,8 +252,9 @@ Finish:
 ; Exits if Esc is pressed or mouse is moved, returning Esc code in AL or 1
 ; if mouse was moved or his buttons was pressed.
 ;
-; Output: AX = 1 = Mouse moved
-;         AL = 0 = None key pressed
+; Output: AL = 00h = None key pressed
+;         AL = 01h = Mouse moved
+;         AL = 1Bh = Esc key pressed
 ;
 ; Loading CX with a frames number and calling Count_Retrace, allow modify
 ; the pause duration.
@@ -262,7 +268,7 @@ Count_Retrace:
     push   cx                          ; Preserves frames counter
     call   Check_Mouse                 ; Gets mouse (if present) status
     pop    cx                          ; Restores frames counter
-    test   ax,ax                       ; Checks if mouse was moved or button pressed (AX = 1)
+    test   al,al                       ; Checks if mouse was moved or button pressed (AL = 1)
     jnz    Exit_Pause                  ; Yes, mouse moved
 
     ; Checks Keyboard
@@ -283,7 +289,7 @@ Exit_Pause:
 Check_Vertical_Retrace:
     mov   dx,03DAh
 
-; Waits Vertical Retrace to Finish, Case It Is in Progress
+; Waits Vertical Retrace to Finish, Case It is in Progress
 Wait_Retrace_End:
     in    al,dx
     test  al,8                         ; Is the Retrace in progress?
@@ -299,15 +305,14 @@ Wait_Retrace_Start:
 
 ;-----------------------------------------------------------------------------
 ; Checks Keyboard
-
 ;
-; Returns AX = 0 if none key was pressed.   
+; Returns AL = 0 if none key was pressed.   
 ;-----------------------------------------------------------------------------
 Check_Keyboard:
     mov   ah,01h
     int   16h                          ; Checks if any key was pressed
     jnz   Get_Key                      ; Yes, then gets the pressed key
-    xor   ax,ax                        ; Key Code for none key pressed (0)
+    xor   al,al                        ; Key Code for none key pressed (0)
     ret
 
 ; Reads Keyboard Buffer (get pressed key)
@@ -321,27 +326,27 @@ Get_Key:
 ; Checks if Mouse was Moved or Any Buttons Pressed
 ;
 ; Input : None.
-; Output: AX = 0 Mouse is not present, was not moved or buttons not pressed.
-;         AX = 1 Mouse was moved or buttons pressed.
+; Output: AL = 0 Mouse is not present, was not moved or buttons not pressed.
+;         AL = 1 Mouse was moved or buttons pressed.
 ;-----------------------------------------------------------------------------
 Check_Mouse:
-   mov   ax,[cs:Mouse_Present]
-   or    ax,ax                         ; Checks mouse presence
-   jz    Finish_Mouse_Checking         ; Mouse is not installed (AX = 0)
+   mov   al,[cs:Mouse_Present]
+   or    al,al                         ; Checks mouse presence
+   jz    Finish_Mouse_Checking         ; Mouse is not installed (AL = 0)
    mov   ax,0003h
    int   33h                           ; Gets mouse buttons state
-   xor   ax,ax                         ; Initializes mouse status
+   xor   al,al                         ; Initializes mouse status
    and   bl,03h                        ; Checks if any button was pressed
    jnz   Mouse_Altered                 ; Yes, one or more buttons was pressed
    mov   ax,000Bh
    int   33h                           ; Gets mouse moviment state
-   xor   ax,ax                         ; Initializes mouse status
+   xor   al,al                         ; Initializes mouse status
    or    cx,dx                         ; Mouse was moved?
-   jz    Finish_Mouse_Checking         ; No, then exits with AX = 0
+   jz    Finish_Mouse_Checking         ; No, then exits with AL = 0
 
 Mouse_Altered:
-   inc   ax                            ; Mouse moved or buttons pressed
-
+   inc   al                            ; Mouse moved or buttons pressed
+                                       ; (Returns AL = 1)
 Finish_Mouse_Checking:
    ret
 
@@ -350,7 +355,7 @@ Finish_Mouse_Checking:
 ; Initializes Initial FLSR Seed (= RANDOMIZE TIMER in QBasic)
 ; Gets initial seed from system ticks.
 ;
-; Input:  None.
+; Input : None.
 ; Output: DX, BP = Random seed for the LFSR.
 ;-----------------------------------------------------------------------------
 Get_Initial_LFSR_Seed:
@@ -382,7 +387,7 @@ Seed_OK:
 ; the program.
 ;
 ; Input : BP = LFSR seed
-; Output: BP = new LFSR seed (value from 1 to 64000)
+; Output: BP = New LFSR seed (value from 1 to 64000)
 ;              Decrement BP value by 1 to get 0 to 63999, BUT you must
 ;              restore it again, after the use.
 ;-----------------------------------------------------------------------------
@@ -408,7 +413,7 @@ Check_Bound:
 ;; To get 0 to 63999, decrement AX by 1, where use it on code.
 ;;
 ;; Input : None.
-;; Output: AX = new LFSR seed.
+;; Output: AX = New LFSR seed.
 ;;         Use another register if desire to preserve AX.
 ;;-----------------------------------------------------------------------------
 ;Get_LFSR_Number:
@@ -432,7 +437,7 @@ Check_Bound:
 ;
 ; Input : SI = Offset Address of the message to show
 ;         DI = VGA Offset Address where to print
-; Output: AX = 0
+; Output: AX = 0 (consequence, not is mandatory)
 ;         BX, DI and SI destroyed
 ;-----------------------------------------------------------------------------
 Show_Message:
@@ -454,7 +459,7 @@ End_Printing:
 ; Input : AL = ASCII Code of the character.
 ;         DI = Screen Offset Address where to print.
 ; Output: DI = Char position (Offset Address) on screen, for next printing.
-;         DS, ES and SI preserveds.
+;         DS, ES and SI preserved.
 ;         AX, BX, CX and DX destroyed.
 ;-----------------------------------------------------------------------------
 Draw_Char_Mode_13h:
@@ -535,7 +540,7 @@ Charset_BMP_Seg  dw 0F000h             ; Segment of Charset Bitmaps Table (0F000
 Charset_BMP_Off  dw 0FA6Eh             ; Offset Address of Charset Bitmaps (0FA6Eh = BIOS Charset)
 
 
-Mouse_Present    dw 0                  ; Flag to the mouse presence (0 = not is present)
+Mouse_Present    db 0                  ; Flag to the mouse presence (0 = not is present)
 
 Need_VGA_Msg     db 0Dh, 0Ah, "I need a VGA video card!", 0Dh, 0Ah, "$"
 

@@ -7,11 +7,14 @@
 ; Compile with: nasm lfsr.asm -o lfsr.com
 ;
 ; NOTE: BP register stores the LFSR seed THROUGHOUT the program!
+;       Do not wait which called routines will preserve AX, BX, CX or DX.
+;       They are for general purpose in the program. Save them if you need 
+;       to preserve them.
 ;*****************************************************************************
 
 
-    cpu   8086                         ; Generate binary for 8086 (OBRIGATORY
-                                       ; for not generate 80286 code).
+    cpu   8086                         ; Generate binary for 8086 (MANDATORY
+                                       ; for Nasm not generate 80286 code).
     org   100h                         ; Program is a .COM file
 
 
@@ -70,9 +73,10 @@ No_VGA:
 Get_Video_Mode:
     mov   ah,0Fh
     int   10h                          ; Gets current video mode
-    push  ax                           ; Saves current video mode
-                                       ; Will restored on before to return to DOS
-
+    mov   ah,bh                        ; Copies current video page in AH
+    push  ax                           ; Saves current video mode and page
+                                       ; Will restored on before to return
+                                       ; to DOS
 
 ;-----------------------------------------------------------------------------
 ; Change Video Mode to 320x200 by 256 Colors
@@ -111,8 +115,9 @@ Set_VGA_Mode:
     pop   ds                           ; DS points to vars into program code
     cld                                ; Index registers increments
     
-    call  Wait_Vertical_Retrace        ; Checks if retrace is in progress
+    call  Check_Vertical_Retrace       ; Checks if retrace is in progress
                                        ; and wait it to restart
+
 
 ;-----------------------------------------------------------------------------
 ; Start of "Fade In" Effect
@@ -144,7 +149,7 @@ Fade_In_Plot_Loop:
     call  Check_Keyboard               ; Checks keyboard
     cmp   al,ESC_KEY                   ; Was Esc key pressed?
     je    Finish                       ; Yes, terminates program
-    call  Wait_Vertical_Retrace        ; 
+    call  Check_Vertical_Retrace       ; 
     jmp   Fade_In_Frame_Loop           ;
 
 
@@ -188,7 +193,7 @@ Fade_Out_Plot_Loop:
     call  Check_Keyboard               ; Checks keyboard
     cmp   al,ESC_KEY                   ; Was Esc key pressed?
     je    Finish                       ; Yes, terminates program
-    call  Wait_Vertical_Retrace        ; 
+    call  Check_Vertical_Retrace       ; 
     jmp   Fade_Out_Frame_Loop          ;
 
 
@@ -208,10 +213,11 @@ Pause_FO:
 
 
 ;-----------------------------------------------------------------------------
-; Program End
+; Program End      (Note: Video page (AH) is not restored)
 ;-----------------------------------------------------------------------------
 Finish:
-    pop   ax                           ; Restores original video mode (AL)
+    pop   ax                           ; Restores original video mode (AL) 
+                                       ; and page (AH)
     xor   ah,ah                        ; Function 0
     int   10h                          ; Backs to original video mode
     int   20h                          ; Backs to DOS (All DOSes)
@@ -234,7 +240,7 @@ Count_Retrace:
     call   Check_Keyboard
     cmp    al,ESC_KEY                  ; Checks if Esc was pressed during timing.
     je     Exit_Pause                  ; Yes, then aborts pause.
-    call   Wait_Vertical_Retrace       ; Waits Vertical Retrace to start to count it.
+    call   Check_Vertical_Retrace      ; Waits Vertical Retrace to start to count it.
     loop   Count_Retrace               ; Backs to counter a new retrace.
     xor    al,al                       ; None key was pressed during pause,
                                        ; then returns with AL = 0.
@@ -243,21 +249,22 @@ Exit_Pause:
 
 
 ;-----------------------------------------------------------------------------
-; Wait Vertical Retrace to Finish, Case It Is in Progress
+; Checks for Vertical Retrace
 ;-----------------------------------------------------------------------------
-Wait_Vertical_Retrace:    
+Check_Vertical_Retrace:
     mov   dx,03DAh
-    in    al,dx
-    test  al,8
-    jnz   Wait_Vertical_Retrace
 
-Wait_Vertical_Retrace_Start:
-;    mov   dx,03DAh                    ; Use if you will need call
-                                       ; Wait_Vertical_Retrace_Start from
-                                       ; another place in the code.
+; Waits Vertical Retrace to Finish, Case It is in Progress
+Wait_Retrace_End:
     in    al,dx
-    test  al,8
-    jz    Wait_Vertical_Retrace_Start
+    test  al,8                         ; Is the Retrace in progress?
+    jnz   Wait_Retrace_End             ; Yes, then wait it to fininish
+
+; Waits Vertical Retrace to Start
+Wait_Retrace_Start:
+    in    al,dx
+    test  al,8                         ; The Retrace has began?
+    jz    Wait_Retrace_Start           ; No, then continues waiting
     ret
 
 
@@ -282,7 +289,8 @@ Get_Key:
 ;-----------------------------------------------------------------------------
 ; Initializes Initial FLSR Seed (= RANDOMIZE TIMER in QBasic)
 ; Gets initial seed from system ticks.
-; Input:  None.
+;
+; Input : None.
 ; Output: DX, BP = Random seed for the LFSR.
 ;-----------------------------------------------------------------------------
 Get_Initial_LFSR_Seed:
@@ -312,8 +320,9 @@ Seed_OK:
 ; by decrementing BP before using it and incrementing it again after use,
 ; to back it to a non zero value, since BP stores the LFSR seed throughout 
 ; the program.
+;
 ; Input : BP = LFSR seed
-; Output: BP = new LFSR seed (value from 1 to 64000)
+; Output: BP = New LFSR seed (value from 1 to 64000)
 ;              Decrement BP value by 1 to get 0 to 63999, BUT you must
 ;              restore it again, after the use.
 ;-----------------------------------------------------------------------------
@@ -360,6 +369,7 @@ Check_Bound:
 
 ;-----------------------------------------------------------------------------
 ; Show Message on Screen
+;
 ; Input : SI = Offset Address of the message to show
 ;         DI = VGA Offset Address where to print
 ; Output: AX = 0
@@ -384,7 +394,7 @@ End_Printing:
 ; Input : AL = ASCII Code of the character.
 ;         DI = Screen Offset Address where to print.
 ; Output: DI = Char position (Offset Address) on screen, for next printing.
-;         DS, ES and SI preserveds.
+;         DS, ES and SI preserved.
 ;         AX, BX, CX and DX destroyed.
 ;-----------------------------------------------------------------------------
 Draw_Char_Mode_13h:
