@@ -32,7 +32,8 @@ The generated file is less than 1 KB (~450 bytes) and you can execute it directl
 - The DOSBox(-X) emulator (simply drag and drop the lfsr.com file into the emulator window
 or mount its directory as a drive).
 
-You can press the **Esc key** at any time to terminate the program and return to the DOS prompt.
+You can press the **Esc key** or move or press a button from mouse, on M version of code,
+at any time to terminate the program and return to the DOS prompt.
 
 
 How the LFSR Works in This Project
