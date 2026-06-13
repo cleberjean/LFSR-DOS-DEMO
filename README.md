@@ -27,9 +27,9 @@ How to Run
 
 The generated file is less than 1 KB (~450 bytes) and you can execute it directly in:
 
-A PC (with an 8086 or lastest processors) running native MS-DOS/FreeDOS (**bare-metal**).
+- A PC (with an 8086 or lastest processors) running native MS-DOS/FreeDOS (**bare-metal**).
 
-The DOSBox(-X) emulator (simply drag and drop the lfsr.com file into the emulator window
+- The DOSBox(-X) emulator (simply drag and drop the lfsr.com file into the emulator window
 or mount its directory as a drive).
 
 You can press the **Esc key** at any time to terminate the program and return to the DOS prompt.
