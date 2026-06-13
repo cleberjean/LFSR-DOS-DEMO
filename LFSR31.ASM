@@ -1,7 +1,7 @@
 ;*****************************************************************************
 ; Linear Feedback Shift Register Use Demonstration for 8086 CPU
 ; Cleber Jean Barranco <cleberjean@hotmail.com>
-; Version 3.1 (with messages) from 12jun2026.
+; Version 3.1 (with messages) from 13jun2026.
 ; Runs "Fade In" and "Fade Out" effects until the Esc key is pressed.
 ;
 ; Compile with: nasm lfsr.asm -o lfsr.com
@@ -470,5 +470,5 @@ Need_VGA_Msg     db 0Dh, 0Ah, "I need a VGA video card!", 0Dh, 0Ah, "$"
 Msg_Full         db "The Screen is Full", 0
 Msg_Clean        db "The Screen is Blank", 0
 
-PGM_SIGNATURE    db "LFSR V3.1 12MAY2026"
+PGM_SIGNATURE    db "LFSR V3.1 13JUN2026"
 
