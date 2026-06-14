@@ -3,10 +3,12 @@
 ; Cleber Jean Barranco <cleberjean@hotmail.com>
 ; Version 3.1 (with messages) from 14jun2026.
 ; Runs "Fade In" and "Fade Out" effects until the Esc key is pressed.
+; The code uses the INT 20H to return to DOS, to let compatible with DOS 1.x.
 ;
 ; Compile with: nasm lfsr.asm -o lfsr.com
 ;
 ; NOTE: BP register stores the LFSR seed THROUGHOUT the program!
+;       ES points to VGA segment (0A000h).
 ;       Do not wait which called routines will preserve AX, BX, CX or DX.
 ;       They are for general purpose in the program. Save them if you need 
 ;       to preserve them.
@@ -396,7 +398,8 @@ End_Printing:
 ; Draws an 8x8 character on screen with inverted background color.
 ;
 ; Input : AL = ASCII Code of the character.
-;         DI = Screen Offset Address where to print.
+;         ES = VGA segment (0A000h)
+;         DI = Screen (VGA) Offset Address where to print the character.
 ; Output: DI = Char position (Offset Address) on screen, for next printing.
 ;         DS, ES and SI preserved.
 ;         AX, BX, CX and DX destroyed.
@@ -406,7 +409,7 @@ Draw_Char_Mode_13h:
     push  di                           ; Saves the printing offset address
     push  si
     push  ds
-    push  es
+;    push  es
 
 
 ; Gets Charset Bitmaps Table Address
@@ -421,8 +424,8 @@ Draw_Char_Mode_13h:
     shl   ax,1                         ; AX = ASCII * 8 (Each char fills 8 bytes)
     add   si,ax                        ; DS:SI = Address of the our character
                                        ; bitmap.
-    mov   ax,0A000h
-    mov   es,ax                        ; Points ES to VGA graphics segment
+;    mov   ax,0A000h
+;    mov   es,ax                        ; Points ES to VGA graphics segment
 
     mov   dx,312                       ; Skip line constant (320 - 8 dots)
 ;    mov   bl,0x0F                      ; XOR inverting mask (0x0F = Black/White)
@@ -452,7 +455,7 @@ Draw_Char_Next_Bit:
                                        ; not printed all 8 rows from char.
 
 ; Restores All Original Values from Used Registers   
-    pop   es
+;    pop   es
     pop   ds
     pop   si
     pop   di                           ; Restores the VGA printing offset
@@ -463,7 +466,7 @@ Draw_Char_Next_Bit:
 ;-----------------------------------------------------------------------------
 ; Vars
 ;-----------------------------------------------------------------------------
-    section .data                      ; (Nasm Directive) (Optional!)
+;    section .data                     ; (DO NOT TO USE! ADDS BYTE PADDING!)
 
 ;LFSR_Seed        dw 1                  ; LFSR seed NEVER must be 0, or
 ;                                       ; LFSR will freeze with zeros!
