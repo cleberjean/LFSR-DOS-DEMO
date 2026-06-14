@@ -3,7 +3,7 @@ LFSR Visualization Demo for DOS and 8086 CPU
 
 A classics graphic effect of *Fade In* and *Fade Out* written in **pure Assembly x86 (16-bits)** for the processor Intel 8086. The program uses an algorithm **LFSR (Linear Feedback Shift Register)** Galois type, to fill and clean the screen pixel by pixel in a pseudo-random form, without repeat pixels coordinates, simulating an effect of controlled noise.
 
-The project runs in **Mode 13h** (320x200 pixels, 256 colors), **bare-metal** or emulated (DOSBox, DOSBox-X) DOS environment.
+The project runs in **Mode 13h** (320x200 pixels, 256 colors), **bare-metal** or emulated (DOSBox, DOSBox-X) DOS environment. Also is written to execute even on DOS 1.x (**not uses the 4Ch function from int 21h**).
 
 This code uses a MIT license. Fell free to use, copy it or modificate.
 
