@@ -5,7 +5,7 @@ A classics graphic effect of *Fade In* and *Fade Out* written in **pure Assembly
 
 The project runs in **Mode 13h** (320x200 pixels, 256 colors), **bare-metal** or emulated (DOSBox, DOSBox-X) DOS environment. Also is written to run even on DOS 1.x (**not uses the 4Ch exit function from int 21h**).
 
-This code uses a MIT license. Fell free to use, copy it or modificate.
+This code uses a MIT license. Feel free to use, copy it or modificate it.
 
 
 Author
