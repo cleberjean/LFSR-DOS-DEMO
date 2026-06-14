@@ -1,7 +1,7 @@
 ;*****************************************************************************
 ; Linear Feedback Shift Register Use Demonstration for 8086 CPU
 ; Cleber Jean Barranco <cleberjean@hotmail.com>
-; Version 3.1 (with messages) from 13jun2026.
+; Version 3.1 (with messages) from 14jun2026.
 ; Runs "Fade In" and "Fade Out" effects until the Esc key is pressed.
 ;
 ; Compile with: nasm lfsr.asm -o lfsr.com
@@ -14,7 +14,7 @@
 
 
     cpu   8086                         ; Generate binary for 8086 (MANDATORY
-                                       ; for Nasm not generate 80286 code).
+                                       ; for Nasm do not generate 80286 code).
     org   100h                         ; Program is a .COM file
 
 
@@ -42,9 +42,17 @@
 
 ;-----------------------------------------------------------------------------
 ; Program Start
-; Checks if Video Card is a VGA/MCGA (1A00h function from INT 10h)
 ;-----------------------------------------------------------------------------
-Begin:   
+Start:
+    push  cs                           ; Gets code segment
+    pop   ds                           ; DS points to vars into program code
+    cld                                ; Index registers increments
+
+
+;-----------------------------------------------------------------------------
+; Checks if Video Card is a VGA/MCGA (1A00h function from INT 10h) and aborts
+; if is not.
+;-----------------------------------------------------------------------------
     mov    ax,1A00h
     int    10h                         ; Checks presence of VGA/MCGA card
     cmp    al,1Ah
@@ -101,9 +109,7 @@ Set_VGA_Mode:
 ; 1 Second Delay for Monitor Change Resolution   
 ;-----------------------------------------------------------------------------
     mov   cx,70                        ; 70 frames = 1 second on 70 FPS
-    call  Count_Retrace                ; Waits the monitor to change resolution
-;    cmp   al,ESC_KEY
-;    je    Finish
+    call  Check_Vertical_Retrace       ; Waits the monitor to change resolution
 
 
 ;-----------------------------------------------------------------------------
@@ -111,13 +117,10 @@ Set_VGA_Mode:
 ;-----------------------------------------------------------------------------
     mov   ax,0A000h                    ; VGA 320x200 segment
     mov   es,ax                        ; ES will point to VGA
-    push  cs                           ; Gets code segment
-    pop   ds                           ; DS points to vars into program code
-    cld                                ; Index registers increments
     
+
     call  Check_Vertical_Retrace       ; Checks if retrace is in progress
                                        ; and wait it to restart
-
 
 ;-----------------------------------------------------------------------------
 ; Start of "Fade In" Effect
@@ -130,13 +133,13 @@ Fade_In_Start:
 ; Fade In Effect    
 ;-----------------------------------------------------------------------------
 Fade_In_Frame_Loop:    
-    mov   cx,PIXELS_PER_FRAME
-
+    mov   al,FADE_IN_COLOR             ; NOTE: AL is changed by the keyboard
+                                       ;       checking, then we have restore
+                                       ;       it.
+    mov   cx,PIXELS_PER_FRAME          ; Loads loop counter with the number
+                                       ; of pixels per frame
 
 Fade_In_Plot_Loop:
-    mov   al,FADE_IN_COLOR             ; NOTE: AL is changed by the keyboard
-                                       ;       checking, then we have restore 
-                                       ;       it.
     mov   di,bp                        ; Copies LFSR number to DI
     dec   di                           ; This allow to unplot at position 0
     stosb                              ; Plots the dot
@@ -158,13 +161,11 @@ Fade_In_Plot_Loop:
 ; Finish the program if Esc key is pressed while pause is in progress.
 ;-----------------------------------------------------------------------------
 Pause_FI:    
-;    mov   cx,60                        ; Wait 60 frames
-;    call  Count_Retrace                ; Waits 1s (on 60 FPS) to show the message
     mov   si,Msg_Full
     mov   di,POSITION_MSG_FULL
     call  Show_Message
     call  Pause
-    cmp   al,ESC_KEY                   ; Was Esc key pressed?
+    cmp   al,ESC_KEY                   ; Was Esc key pressed during pause?
     je    Finish                       ; Yes, terminates program
 
 
@@ -174,13 +175,18 @@ Pause_FI:
 Fade_Out_Start:    
     call  Get_Initial_LFSR_Seed        ; Get a new seed
 
-Fade_Out_Frame_Loop:    
-    mov   cx,PIXELS_PER_FRAME          ; Loads loop counter with the number 
-                                       ; of pixels per frame
-Fade_Out_Plot_Loop:
+
+;-----------------------------------------------------------------------------
+; Fade Out Effect
+;-----------------------------------------------------------------------------
+Fade_Out_Frame_Loop:
     mov   al,FADE_OUT_COLOR            ; NOTE: AL is changed by the keyboard
-                                       ;       checking, then we have restore 
+                                       ;       checking, then we have restore
                                        ;       it.
+    mov   cx,PIXELS_PER_FRAME          ; Loads loop counter with the number
+                                       ; of pixels per frame
+
+Fade_Out_Plot_Loop:
     mov   di,bp                        ; Copies LFSR number to DI
     dec   di                           ; This allow to unplot at position 0
     stosb                              ; Unplots the dot
@@ -202,8 +208,6 @@ Fade_Out_Plot_Loop:
 ; Finish the program if Esc key is pressed while pause is in progress.
 ;-----------------------------------------------------------------------------
 Pause_FO:
-;    mov   cx,60                        ; Wait 60 frames
-;    call  Count_Retrace                ; Waits 1s (on 60 FPS) to show the message
     mov   si,Msg_Clean
     mov   di,POSITION_MSG_BLANK
     call  Show_Message
@@ -270,13 +274,14 @@ Wait_Retrace_Start:
 
 ;-----------------------------------------------------------------------------
 ; Checks Keyboard
-; Returns AX = 0 if none key was pressed.   
+;
+; Returns AL = 0 if none key was pressed.
 ;-----------------------------------------------------------------------------
 Check_Keyboard:
     mov   ah,01h
     int   16h                          ; Checks if any key was pressed
     jnz   Get_Key                      ; Yes, then gets the pressed key
-    xor   ax,ax                        ; Key Code for none key pressed (0)
+    xor   al,al                        ; Key Code for none key pressed (0)
     ret
 
 ; Reads Keyboard Buffer (get pressed key)
@@ -372,7 +377,7 @@ Check_Bound:
 ;
 ; Input : SI = Offset Address of the message to show
 ;         DI = VGA Offset Address where to print
-; Output: AX = 0
+; Output: AX = 0 (consequence, not is mandatory)
 ;         BX, DI and SI destroyed
 ;-----------------------------------------------------------------------------
 Show_Message:
@@ -388,7 +393,6 @@ End_Printing:
 
 ;-----------------------------------------------------------------------------
 ; Draw_Char_Mode_13h Routine
-; Derived from Google Gemini Code
 ; Draws an 8x8 character on screen with inverted background color.
 ;
 ; Input : AL = ASCII Code of the character.
@@ -421,8 +425,8 @@ Draw_Char_Mode_13h:
     mov   es,ax                        ; Points ES to VGA graphics segment
 
     mov   dx,312                       ; Skip line constant (320 - 8 dots)
-;    mov   bh,0x0F                      ; XOR inverting mask (0x0F = Black/White)
-    mov   bh,0x0E                      ; XOR inverting mask (0x0E = Blue/Yellow)
+;    mov   bl,0x0F                      ; XOR inverting mask (0x0F = Black/White)
+    mov   bl,0x0E                      ; XOR inverting mask (0x0E = Blue/Yellow)
     mov   ch,8                         ; Initializes the rows counter
 
 
@@ -432,14 +436,11 @@ Draw_Char_Loop:
     mov   cl,8                         ; Char row 8 bits counter
 
 Draw_Char_Row_Loop:
-    shl   al,1                         ; Shifts bit to Carry Flag
-    jnc   Draw_Char_Next_Bit           ; If bit is 0 (bg): do none
+    shl   al,1                         ; Shifts bitmap bit to Carry Flag
+    jnc   Draw_Char_Next_Bit           ; If char bitmap bit is 0, not invert
 
-; If Bit is 1: Plots the Dot, Inverting the Screen Background Color
-    mov   bl,[es:di]                   ; Gets the screen background pixel color.
-    xor   bl,bh                        ; Invert pixel.
-    mov   [es:di],bl                   ; Plots the inverted pixel color back
-                                       ; on screen.
+    xor   [es:di],bl                   ; Invert the screen bg pixel color
+
 Draw_Char_Next_Bit:
     inc   di                           ; Increment the screen pointer (Axis X)
     dec   cl
@@ -480,5 +481,6 @@ Need_VGA_Msg     db 0Dh, 0Ah, "I need a VGA video card!", 0Dh, 0Ah, "$"
 Msg_Full         db "The Screen is Full", 0
 Msg_Clean        db "The Screen is Blank", 0
 
-PGM_SIGNATURE    db "LFSR V3.1 13JUN2026"
+
+PGM_SIGNATURE    db "LFSR V3.1 14JUN2026"
 
