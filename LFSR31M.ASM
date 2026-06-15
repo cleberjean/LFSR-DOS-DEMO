@@ -1,9 +1,8 @@
 ;*****************************************************************************
 ; Linear Feedback Shift Register Use Demonstration for 8086 CPU
 ; Cleber Jean Barranco <cleberjean@hotmail.com>
-; Version 3.1 M (Mouse Support) from 15jun2026.
 ; Runs "Fade In" and "Fade Out" effects until the Esc key is pressed.
-; The code uses the INT 20H to return to DOS, to let compatible with DOS 1.x.
+; Version 3.1 M (Mouse Support) from 15jun2026.
 ;
 ; Compile with: nasm lfsr.asm -o lfsr.com
 ;
@@ -12,6 +11,8 @@
 ;        * Do not wait which called routines will preserve AX, BX, CX or DX.
 ;          They are for general purpose in the program. Save them if you
 ;          need to preserve them.
+;        * The code uses the INT 20H to return to the DOS, to make it
+;          compatible with DOS 1.x. (Not tested on DOS 1.x)
 ;*****************************************************************************
 
 
@@ -261,13 +262,13 @@ Finish:
 ;         AL = 1Bh = Esc key was pressed
 ;
 ; Loading CX with a frames number and calling Count_Retrace (what, because
-; this, does not be a local label), allow modify the pause duration.
+; this, can not be a local label), allow to change the pause duration.
 ;-----------------------------------------------------------------------------
 Pause:
     mov    cx,154                      ; 150 frames (2,5 seconds in 60 FPS).
-                                       ; And + 4, to break the synchronization
-                                       ; of LFSR seed with the time.
-; Count_Retrace (Does Not Be Local!)
+                                       ; And + 4, to break the synchronism
+                                       ; of LFSR seed with the pause time.
+; Count_Retrace (Do Not Make Local!)
 Count_Retrace:
     ; Checks Mouse
     push   cx                          ; Preserves frames counter
@@ -471,8 +472,10 @@ Show_Message:
 Draw_Char_Mode_13h:
 ; Saves All Original Values from Registers that Will Are Used  
     push  di                           ; Saves the printing offset address
-    push  si
-    push  ds
+    push  si                           ; SI will be used to store the
+                                       ; character bitmap table offset.
+    push  ds                           ; DS will be used to store the 
+                                       ; character bitmap table segment
 ;    push  es
 
 
@@ -521,8 +524,8 @@ Draw_Char_Mode_13h:
 
 ; Restores All Original Values from Used Registers   
 ;    pop   es
-    pop   ds
-    pop   si
+    pop   ds                           ; Restores original DS value
+    pop   si                           ; Restores original SI value
     pop   di                           ; Restores the VGA printing offset
     add   di,8                         ; Next char position (VGA offset)
     ret
@@ -531,9 +534,9 @@ Draw_Char_Mode_13h:
 ;-----------------------------------------------------------------------------
 ; Vars
 ;-----------------------------------------------------------------------------
-;    section .data                     ; DO NOT TO USE ON .COM FILES! 
-                                       ; Adds byte padding, confusing
-                                       ; optimizations.
+;    section .data                     ; NOT IS GOOD USE IT WITH .COM FILES! 
+                                       ; Adds byte padding, causing confusion
+                                       ; with binary code size optimizations.
 
 ;LFSR_Seed        dw 1                  ; LFSR seed NEVER must be 0, or
 ;                                       ; LFSR will freeze with zeros!
