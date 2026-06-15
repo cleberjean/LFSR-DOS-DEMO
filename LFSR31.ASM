@@ -1,17 +1,17 @@
 ;*****************************************************************************
 ; Linear Feedback Shift Register Use Demonstration for 8086 CPU
 ; Cleber Jean Barranco <cleberjean@hotmail.com>
-; Version 3.1 (with messages) from 14jun2026.
+; Version 3.1 from 15jun2026.
 ; Runs "Fade In" and "Fade Out" effects until the Esc key is pressed.
 ; The code uses the INT 20H to return to DOS, to let compatible with DOS 1.x.
 ;
 ; Compile with: nasm lfsr.asm -o lfsr.com
 ;
-; NOTE: BP register stores the LFSR seed THROUGHOUT the program!
-;       ES points to VGA segment (0A000h).
-;       Do not wait which called routines will preserve AX, BX, CX or DX.
-;       They are for general purpose in the program. Save them if you need 
-;       to preserve them.
+; NOTES: * BP register stores the LFSR seed THROUGHOUT the program!
+;        * ES points to VGA segment (0A000h).
+;        * Do not wait which called routines will preserve AX, BX, CX or DX.
+;          They are for general purpose in the program. Save them if you
+;          need to preserve them.
 ;*****************************************************************************
 
 
@@ -55,10 +55,11 @@ Start:
 ; Checks if Video Card is a VGA/MCGA (1A00h function from INT 10h) and aborts
 ; if is not.
 ;-----------------------------------------------------------------------------
+ Check_VGA_Card:
     mov    ax,1A00h
     int    10h                         ; Checks presence of VGA/MCGA card
     cmp    al,1Ah
-    jne    No_VGA                      ; IF AL != 1Ah video card not is VGA
+    jne    .No_VGA                     ; IF AL != 1Ah video card not is VGA
     cmp    bl,08h
     je     Get_Video_Mode              ; VGA with a color monitor
     cmp    bl,0Ah
@@ -70,7 +71,7 @@ Start:
 ;-----------------------------------------------------------------------------
 ; VGA with an W&B Monitor or is Not a VGA
 ;-----------------------------------------------------------------------------
-No_VGA:
+.No_VGA:
     mov    dx,Need_VGA_Msg             ; Error message for no VGA video card
     mov    ah,09h
     int    21h                         ; Show error message
@@ -92,7 +93,7 @@ Get_Video_Mode:
 ; Change Video Mode to 320x200 by 256 Colors
 ;-----------------------------------------------------------------------------
 Set_VGA_Mode:    
-    mov   ax,0013h                     ; Video mode 13h
+    mov   ax,0013h                     ; Select video mode 13h
     int   10h                          ; Change to MCGA (320x200x256)
 
 
@@ -130,32 +131,31 @@ Set_VGA_Mode:
 Fade_In_Start:    
     call  Get_Initial_LFSR_Seed
 
-
 ;-----------------------------------------------------------------------------
-; Fade In Effect    
+; Fade In Effect Main Loop
 ;-----------------------------------------------------------------------------
-Fade_In_Frame_Loop:    
+.Fade_In_Frame_Loop:
     mov   al,FADE_IN_COLOR             ; NOTE: AL is changed by the keyboard
                                        ;       checking, then we have restore
                                        ;       it.
     mov   cx,PIXELS_PER_FRAME          ; Loads loop counter with the number
                                        ; of pixels per frame
 
-Fade_In_Plot_Loop:
+.Fade_In_Plot_Loop:
     mov   di,bp                        ; Copies LFSR number to DI
     dec   di                           ; This allow to unplot at position 0
     stosb                              ; Plots the dot
     call  Get_LFSR_Number
     cmp   bp,[Initial_Seed]            ; The screen is full?
     je    Pause_FI                     ; Yes, then makes a pause for Fade Out
-    loop  Fade_In_Plot_Loop
+    loop  .Fade_In_Plot_Loop
 
 ; Checks Keyboard    
     call  Check_Keyboard               ; Checks keyboard
     cmp   al,ESC_KEY                   ; Was Esc key pressed?
     je    Finish                       ; Yes, terminates program
     call  Check_Vertical_Retrace       ; 
-    jmp   Fade_In_Frame_Loop           ;
+    jmp   .Fade_In_Frame_Loop           ;
 
 
 ;-----------------------------------------------------------------------------
@@ -177,32 +177,31 @@ Pause_FI:
 Fade_Out_Start:    
     call  Get_Initial_LFSR_Seed        ; Get a new seed
 
-
 ;-----------------------------------------------------------------------------
-; Fade Out Effect
+; Fade Out Effect Main Loop
 ;-----------------------------------------------------------------------------
-Fade_Out_Frame_Loop:
+.Fade_Out_Frame_Loop:
     mov   al,FADE_OUT_COLOR            ; NOTE: AL is changed by the keyboard
                                        ;       checking, then we have restore
                                        ;       it.
     mov   cx,PIXELS_PER_FRAME          ; Loads loop counter with the number
                                        ; of pixels per frame
 
-Fade_Out_Plot_Loop:
+.Fade_Out_Plot_Loop:
     mov   di,bp                        ; Copies LFSR number to DI
     dec   di                           ; This allow to unplot at position 0
     stosb                              ; Unplots the dot
     call  Get_LFSR_Number
     cmp   bp,[Initial_Seed]            ; The screen is clean?
     je    Pause_FO                     ; Yes, then pause to restart effects
-    loop  Fade_Out_Plot_Loop
+    loop  .Fade_Out_Plot_Loop
     
 ; Checks Keyboard    
     call  Check_Keyboard               ; Checks keyboard
     cmp   al,ESC_KEY                   ; Was Esc key pressed?
     je    Finish                       ; Yes, terminates program
     call  Check_Vertical_Retrace       ; 
-    jmp   Fade_Out_Frame_Loop          ;
+    jmp   .Fade_Out_Frame_Loop          ;
 
 
 ;-----------------------------------------------------------------------------
@@ -232,25 +231,29 @@ Finish:
 ;-----------------------------------------------------------------------------
 ; A Litte Delay Using a Frames Counter Routine
 ; Counts the start of Vertical Retraces to know the pause time.
-; Checks keyboard during pause. (no locking)
+; Checks keyboard during pause. (for not to lock during the pause)
 ; Exits if Esc is pressed, returning Esc code in AL.
 ;
-; Loading CX with a frames number and calling Count_Retrace, allow modify
-; the pause duration.
+; Output: AL = 00h = None key was pressed
+;         AL = 1Bh = Esc key was pressed
+;
+; Loading CX with a frames number and calling Count_Retrace (what, because
+; this, does not be a local label), allow modify the pause duration.
 ;-----------------------------------------------------------------------------
 Pause:
     mov    cx,154                      ; 150 frames (2,5 seconds in 60 FPS).
                                        ; And + 4, to break the synchronization
                                        ; of LFSR seed with the time.
+; Count_Retrace (Does Not Be Local!)
 Count_Retrace:
     call   Check_Keyboard
     cmp    al,ESC_KEY                  ; Checks if Esc was pressed during timing.
-    je     Exit_Pause                  ; Yes, then aborts pause.
+    je     .Exit_Pause                 ; Yes, then aborts pause.
     call   Check_Vertical_Retrace      ; Waits Vertical Retrace to start to count it.
     loop   Count_Retrace               ; Backs to counter a new retrace.
     xor    al,al                       ; None key was pressed during pause,
                                        ; then returns with AL = 0.
-Exit_Pause:
+.Exit_Pause:
     ret
 
 
@@ -261,16 +264,16 @@ Check_Vertical_Retrace:
     mov   dx,03DAh
 
 ; Waits Vertical Retrace to Finish, Case It is in Progress
-Wait_Retrace_End:
+.Wait_Retrace_End:
     in    al,dx
     test  al,8                         ; Is the Retrace in progress?
-    jnz   Wait_Retrace_End             ; Yes, then wait it to fininish
+    jnz   .Wait_Retrace_End            ; Yes, then wait it to fininish
 
 ; Waits Vertical Retrace to Start
-Wait_Retrace_Start:
+.Wait_Retrace_Start:
     in    al,dx
     test  al,8                         ; The Retrace has began?
-    jz    Wait_Retrace_Start           ; No, then continues waiting
+    jz    .Wait_Retrace_Start          ; No, then continues waiting
     ret
 
 
@@ -287,7 +290,8 @@ Check_Keyboard:
     ret
 
 ; Reads Keyboard Buffer (get pressed key)
-Get_Key:    
+; May be used to wait keyboard pressing
+Get_Key:
     xor   ah,ah
     int   16h                          ; Gets the value of the pressed key
     ret                                ; Returns with pressed key in AL.
@@ -304,17 +308,17 @@ Get_Initial_LFSR_Seed:
     xor   ah,ah
     int   1Ah                          ; Get system clock ticks since midnight
     xor   dx,cx                        ; XOR between high and low order
-    jnz   Seed_Not_Zero                ; If non zero, store on memory and copies to DI
+    jnz   .Seed_Not_Zero               ; If non zero, store on memory and copies to DI
     inc   dx                           ; Turns seed = 1 (seed CANNOT be 0)
 
-Seed_Not_Zero:
+.Seed_Not_Zero:
     cmp   dx,LFSR_MAX_PERIOD           ; Checks if seed is on range 1 to 64000
-    jbe   Seed_OK                      ; Is seed > 64000?
-    call  Get_LFSR_Number              ; Yes, then raffle a new value into 
+    jbe   .Seed_OK                     ; Is seed > 64000?
+    call  Get_LFSR_Number              ; Yes, then raffle a new value into
                                        ; period from 1 to 64000.
     mov   dx,bp                        ; Copies the drawn LFSR seed in DX,
                                        ; to save it on the next instruction.
-Seed_OK:
+.Seed_OK:
     mov   [Initial_Seed],dx            ; Randomize LFSR initial seed
     mov   bp,dx                        ; Initializes BP (LFSR Seed Register)
     ret
@@ -330,16 +334,16 @@ Seed_OK:
 ;
 ; Input : BP = LFSR seed
 ; Output: BP = New LFSR seed (value from 1 to 64000)
-;              Decrement BP value by 1 to get 0 to 63999, BUT you must
-;              restore it again, after the use.
+;              Decrement BP value by 1 to get 0 to 63999, but you MUST
+;              RESTORE it again, after the use. (Seed can not be 0)
 ;-----------------------------------------------------------------------------
 Get_LFSR_Number:
     shr   bp,1
-    jnc   Check_Bound
+    jnc   .Check_Bound
     xor   bp,LFSR_XOR_MASK
 
 ; Checks Value Limit (not used if period is 65536)
-Check_Bound:
+.Check_Bound:
     cmp   bp,LFSR_MAX_PERIOD
     ja    Get_LFSR_Number              ; Gen another number if number >= max period
                                        ; JA allow generate from 0 up to maximum 
@@ -352,25 +356,25 @@ Check_Bound:
 ;;-----------------------------------------------------------------------------
 ;; LFSR Galois Number Generator (2nd Option - Not Uses BP)
 ;; Generates a period from 1 up to 64000.
-;; To get 0 to 63999, decrement AX by 1, where use it on code.
+;; To get 0 to 63999, decrement the value from [cs:LFSR_Seed] by 1, where the
+;; index zero (0) needs to be used in the code.
 ;;
 ;; Input : None.
-;; Output: AX = new LFSR seed.
-;;         Use another register if desire to preserve AX.
+;; Output: [cs:LFSR_Seed] = New LFSR seed.
 ;;-----------------------------------------------------------------------------
 ;Get_LFSR_Number:
-;    mov   ax,[LFSR_Seed]               ; Gets LFSR seed saved on RAM memory
+;    mov   ax,[cs:LFSR_Seed]            ; Gets LFSR seed saved on RAM memory
 ;    shr   ax,1
-;    jnc   Check_Bound
+;    jnc   .Check_Bound
 ;    xor   ax,LFSR_XOR_MASK
 ;
 ;; Checks Value Limit (not used if period is 65536)
-;Check_Bound:
+;.Check_Bound:
 ;    cmp   ax,LFSR_MAX_PERIOD
 ;    ja    Get_LFSR_Number              ; Gen another number if number >= max period
 ;                                       ; JA allow generate from 0 up to the
 ;                                       ; maximum period - 1 (by decrementing AX).
-;    mov   [LFSR_Seed],ax               ; preserves LFSR seed on RAM memory
+;    mov   [cs:LFSR_Seed],ax            ; preserves LFSR seed on RAM memory
 ;    ret
 
 
@@ -385,11 +389,11 @@ Check_Bound:
 Show_Message:
     lodsb                              ; Gets character to print
     test  al,al                        ; Checks message end (null char)
-    jz    End_Printing
+    jz    .End_Printing
     call  Draw_Char_Mode_13h           ; Prints a single character
     jmp   Show_Message
 
-End_Printing:
+.End_Printing:
     ret
 
 
@@ -416,7 +420,8 @@ Draw_Char_Mode_13h:
 ; Also may be in F000h:FA6Eh BIOS address. (But is not 100% reliable!)  
     mov   ds,[cs:Charset_BMP_Seg]
     mov   si,[cs:Charset_BMP_Off]
-    
+
+
 ; Gets the Character Bitmap Table Offset Address    
     xor   ah,ah                        ; AX = Character ASCII code
     shl   ax,1
@@ -434,24 +439,24 @@ Draw_Char_Mode_13h:
 
 
 ; Draws the Entire Character on Screen
-Draw_Char_Loop:
+.Draw_Char_Loop:
     lodsb                              ; AL = Char bitmap row, SI = Next row
     mov   cl,8                         ; Char row 8 bits counter
 
-Draw_Char_Row_Loop:
+.Draw_Char_Row_Loop:
     shl   al,1                         ; Shifts bitmap bit to Carry Flag
-    jnc   Draw_Char_Next_Bit           ; If char bitmap bit is 0, not invert
+    jnc   .Draw_Char_Next_Bit          ; If char bitmap bit is 0, not invert
 
     xor   [es:di],bl                   ; Invert the screen bg pixel color
 
-Draw_Char_Next_Bit:
+.Draw_Char_Next_Bit:
     inc   di                           ; Increment the screen pointer (Axis X)
     dec   cl
-    jnz   Draw_Char_Row_Loop           ; Processes all the 8 bits from
+    jnz   .Draw_Char_Row_Loop          ; Processes all the 8 bits from
                                        ; character bitmap row.
     add   di,dx                        ; Skips to the next line on screen (Axis Y)
     dec   ch                           ; Decrement the rows counter.
-    jnz   Draw_Char_Loop               ; Backs to plot the next char row, if 
+    jnz   .Draw_Char_Loop              ; Backs to plot the next char row, if
                                        ; not printed all 8 rows from char.
 
 ; Restores All Original Values from Used Registers   
@@ -466,7 +471,9 @@ Draw_Char_Next_Bit:
 ;-----------------------------------------------------------------------------
 ; Vars
 ;-----------------------------------------------------------------------------
-;    section .data                     ; (DO NOT TO USE! ADDS BYTE PADDING!)
+;    section .data                     ; DO NOT TO USE ON .COM FILES!
+                                       ; Adds byte padding, confusing
+                                       ; optimizations.
 
 ;LFSR_Seed        dw 1                  ; LFSR seed NEVER must be 0, or
 ;                                       ; LFSR will freeze with zeros!
@@ -485,5 +492,5 @@ Msg_Full         db "The Screen is Full", 0
 Msg_Clean        db "The Screen is Blank", 0
 
 
-PGM_SIGNATURE    db "LFSR V3.1 14JUN2026"
+PGM_SIGNATURE    db "LFSR V3.1 15JUN2026"
 
