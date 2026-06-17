@@ -93,4 +93,4 @@ static noise of each cycle feels organic and unpredictable.
 
 <br/>
 
-**You are free to use, clone, study, copy and suggest modifications for this code.**
+**You are free to use, clone, study, copy or suggest alterations for this code.**
